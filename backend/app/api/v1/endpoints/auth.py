@@ -1814,8 +1814,8 @@ async def get_csrf_token(
             key="fastapi-csrf-token",
             value=signed_token,  # Use signed token for cookie
             httponly=True,  # Prevent XSS attacks
-            secure=False,  # Set to True in production with HTTPS
-            samesite="lax",  # CSRF protection
+            secure=True,  # Set to True in production with HTTPS
+            samesite="none",  # CSRF protection
             max_age=3600,  # 1 hour expiration
         )
         return create_response(message="CSRF token generated successfully", data=response_data)
