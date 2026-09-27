@@ -3,7 +3,7 @@ import traceback
 from datetime import datetime, timedelta, timezone
 from typing import cast  # Keep cast
 from uuid import UUID
-
+import asyncio
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_csrf_protect import CsrfProtect
@@ -312,33 +312,56 @@ async def login(
                 detail={"field_name": "email", "message": "Inactive user"},
             )
         try:
-            access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-            refresh_token_expires = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+            access_token_expires = timedelta(
+                minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+            )
+            refresh_token_expires = timedelta(
+                minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES
+            )
+
             access_token = security.create_access_token(
                 authenticated_user.id,
                 authenticated_user.email,
                 expires_delta=access_token_expires,
             )
+
             refresh_token = security.create_refresh_token(
-                authenticated_user.id, expires_delta=refresh_token_expires
+                authenticated_user.id,
+                expires_delta=refresh_token_expires,
             )
-            await add_session_tokens_to_redis(
-                redis_client,
-                authenticated_user,
-                access_token=access_token,
-                refresh_token=refresh_token,
-                access_expire_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
-                refresh_expire_minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES,
-                origin_ip=get_client_ip(request),
-            )
+
+            try:
+                await asyncio.wait_for(
+                    add_session_tokens_to_redis(
+                        redis_client,
+                        authenticated_user,
+                        access_token=access_token,
+                        refresh_token=refresh_token,
+                        access_expire_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+                        refresh_expire_minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES,
+                        origin_ip=get_client_ip(request),
+                    ),
+                    timeout=3.0,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Redis session storage failed during login: %s",
+                    e,
+                )
+
             set_refresh_token_cookie(response, refresh_token)
+
         except Exception as e:
             await log_security_event(
                 background_tasks=background_tasks,
                 db_session=db_session,
                 event_type="token_generation_error",
                 user_id=authenticated_user.id,
-                details={"error": str(e), "email": email, "ip_address": ip_address},
+                details={
+                    "error": str(e),
+                    "email": email,
+                    "ip_address": ip_address,
+                },
             )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1814,7 +1837,7 @@ async def get_csrf_token(
             key="fastapi-csrf-token",
             value=signed_token,  # Use signed token for cookie
             httponly=True,  # Prevent XSS attacks
-            secure=True,  # Set to True in production with HTTPS
+            secure=settings.MODE == "production",  # Set to True in production with HTTPS
             samesite="none",  # CSRF protection
             max_age=3600,  # 1 hour expiration
         )

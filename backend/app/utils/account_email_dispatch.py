@@ -158,6 +158,7 @@ async def issue_verification(
     already had, rather than adding a write nothing reads.
     """
     issued = token or security.create_verification_token(user.email)
+    logger.warning("DEBUG VERIFICATION TOKEN: %s", issued)
     await redis_client.setex(
         f"verification_token:{user.id}",
         settings.VERIFICATION_TOKEN_EXPIRE_MINUTES * 60,
