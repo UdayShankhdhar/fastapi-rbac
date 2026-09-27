@@ -347,7 +347,10 @@ class CRUDUser(CRUDBase[User, IUserCreate, IUserUpdate]):
         if not verify_result:
             await self.increment_failed_attempts(user=user, db_session=db_session)
             return None
-        await self.reset_failed_attempts(user=user, db_session=db_session)
+        if user.number_of_failed_attempts:
+            user.number_of_failed_attempts = 0
+            db_session.add(user)
+
         return user
 
     async def remove(self, *, id: UUID | str, db_session: AsyncSession | None = None) -> User:
