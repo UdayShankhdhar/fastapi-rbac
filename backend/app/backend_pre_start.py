@@ -117,7 +117,7 @@ def wait_for_redis() -> None:
             redis_host = os.getenv("REDIS_HOST", str(redis_host_from_settings))
             redis_port_str = os.getenv("REDIS_PORT", str(redis_port_from_settings))
             # In production, get SSL setting from environment or default to True
-            redis_ssl = os.getenv("REDIS_SSL", "true").lower() == "true"
+            redis_ssl = os.getenv("REDIS_SSL", "false").lower() == "true"
             logger.info(
                 "%s mode: Using configured Redis with SSL=%s.",
                 settings.MODE.value,

@@ -57,4 +57,4 @@ echo "Starting FastAPI production server..."
 # The app resolves the client address itself from TRUSTED_PROXIES (ADR 0011
 # decision 8, #203); leaving uvicorn's default 127.0.0.1 in place would give a
 # loopback topology two mechanisms deciding one thing, free to disagree.
-exec gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --forwarded-allow-ips= --log-level info --access-logfile - --error-logfile -
+exec gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000} --forwarded-allow-ips= --log-level info --access-logfile - --error-logfile -
