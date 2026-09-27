@@ -23,7 +23,7 @@ from app.models.role_model import Role
 from app.models.user_model import User
 from app.models.user_role_model import UserRole
 from app.schemas.user_schema import IUserCreate, IUserUpdate
-
+import asyncio
 
 class PasswordReuseError(ValueError):
     """The submitted password is one the reuse policy refuses.
@@ -339,7 +339,11 @@ class CRUDUser(CRUDBase[User, IUserCreate, IUserUpdate]):
         # Removed is_active check here; let endpoint handle it
         from app.core.security import PasswordValidator
 
-        verify_result = PasswordValidator.verify_password(password, user.password)
+        verify_result = await asyncio.to_thread(
+    PasswordValidator.verify_password,
+    password,
+    user.password,
+)
         if not verify_result:
             await self.increment_failed_attempts(user=user, db_session=db_session)
             return None
