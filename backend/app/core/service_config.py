@@ -51,7 +51,8 @@ class ServiceSettings:
 
             # Build rediss:// URL with SSL parameters
             # The cert path will be handled by RedisConnectionFactory when possible
-            return f"rediss://{username}:{password}@{host}:{port}/0"
+            scheme = "rediss" if os.getenv("REDIS_SSL", "false").lower() == "true" else "redis"
+        return f"{scheme}://{username}:{password}@{host}:{port}/0"
 
     @property
     def celery_broker_url(self) -> str:
