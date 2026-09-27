@@ -518,10 +518,7 @@ class Settings(BaseSettings):
             redis_host = info.data.get("REDIS_HOST", "localhost")
             redis_port = info.data.get("REDIS_PORT", "6379")
 
-            scheme = "redis"
-            if info.data.get("MODE") == ModeEnum.production:
-                # If in production, assume SSL is used based on celery_config.py modifications
-                scheme = "rediss"
+            scheme = "rediss" if info.data.get("REDIS_SSL", False) else "redis"
 
             return f"{scheme}://{redis_host}:{redis_port}/0"
         return v
